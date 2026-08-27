@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
                 webView.loadUrl(data.toString())
             } else {
                 // L'appli a été ouverte normalement, on charge l'accueil
-                webView.loadUrl("https://www.tonsite.com")
+                webView.loadUrl("https://myjoy-arena.onrender.com")
             }
 
 
