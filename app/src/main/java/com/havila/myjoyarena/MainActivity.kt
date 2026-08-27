@@ -53,39 +53,17 @@ class MainActivity : AppCompatActivity() {
         layoutSplash = findViewById(R.id.layout_splash)
 
 
+
         // 2. Configuration de la WebView
-            webView.settings.javaScriptEnabled = true
-
-            webView.webViewClient = WebViewClient()
-
-            // Récupérer le lien cliqué
-            val intent = intent
-            val data = intent.data
-
-            if (data != null) {
-                // L'appli a été ouverte via un lien, on charge cette URL
-                webView.loadUrl(data.toString())
-            } else {
-                // L'appli a été ouverte normalement, on charge l'accueil
-                webView.loadUrl("https://myjoy-arena.onrender.com")
-            }
-
-
         //  Collez la configuration de la WebView ICI (dans le onCreate)
         webView.settings.javaScriptEnabled = true
         webView.addJavascriptInterface(WebAppInterface(this), "AndroidShare")
-
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-
-            }
-        }
 
 
 
         // On récupère le User-Agent par défaut
         val defaultUserAgent = webView.settings.userAgentString
+
         // On retire la mention "; wv" (WebView) pour tromper la sécurité de Google
         webView.settings.userAgentString = defaultUserAgent.replace("; wv", "")
 
@@ -160,7 +138,9 @@ class MainActivity : AppCompatActivity() {
 
             // Si l'URL n'a pas encore été chargée avec succès, on la charge
             if (!urlLoaded) {
-                webView.loadUrl(botUrl)
+                // On vérifie s'il y a un lien externe, sinon on prend l'accueil
+                val linkToLoad = intent.data?.toString() ?: botUrl
+                webView.loadUrl(linkToLoad)
             }
         } else {
             // Cacher la WebView, montrer le message hors-ligne
