@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="mauve_primary">#9961B1</color> <color name="mauve_dark">#70458D</color>    <color name="mauve_light">#C194D6</color>   <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
+

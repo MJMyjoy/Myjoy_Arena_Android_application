@@ -1,0 +1,12 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.MyjoyArena" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/mauve_primary</item>
+        <item name="colorPrimaryVariant">@color/mauve_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+
+        <item name="android:statusBarColor">@color/mauve_dark</item>
+    </style>
+
+    <style name="Theme.MyjoyArena" parent="Base.Theme.MyjoyArena" />
+</resources>
+
