@@ -31,7 +31,7 @@ class WebAppInterface(private val context: Context) {
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_SUBJECT, title)
-            putExtra(Intent.EXTRA_TEXT, " ")
+            putExtra(Intent.EXTRA_TEXT, "$text $url")
         }
         context.startActivity(Intent.createChooser(shareIntent, "Partager via"))
     }
