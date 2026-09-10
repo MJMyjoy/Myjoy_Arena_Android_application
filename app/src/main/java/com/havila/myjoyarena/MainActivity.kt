@@ -1,24 +1,30 @@
-package com.havila.myjoyarena
+﻿package com.havila.myjoyarena
 
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.RelativeLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
-// 2. Vous pouvez placer l'interface ICI, en dehors de la classe MainActivity
+// Interface Javascript pour la fonction "Partager"
 class WebAppInterface(private val context: Context) {
     @JavascriptInterface
     fun share(title: String, text: String, url: String) {
@@ -31,12 +37,13 @@ class WebAppInterface(private val context: Context) {
     }
 }
 
-
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var layoutOffline: LinearLayout
     private lateinit var layoutSplash: RelativeLayout
+    private lateinit var swipeRefresh: SwipeRefreshLayout
+    private lateinit var progressBar: ProgressBar
 
     private var urlLoaded = false
     private val botUrl = "https://myjoy-arena.onrender.com" // MON URL
@@ -46,39 +53,29 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-
         // 1. Lier les éléments visuels
         webView = findViewById(R.id.ma_webview)
         layoutOffline = findViewById(R.id.layout_offline)
         layoutSplash = findViewById(R.id.layout_splash)
+        swipeRefresh = findViewById(R.id.swipe_refresh)
+        progressBar = findViewById(R.id.progress_bar)
 
+        // 2. Configuration avancée de la WebView
+        setupWebView()
 
-
-        // 2. Configuration de la WebView
-        //  Collez la configuration de la WebView ICI (dans le onCreate)
-        webView.settings.javaScriptEnabled = true
-        webView.addJavascriptInterface(WebAppInterface(this), "AndroidShare")
-
-
-
-        // On récupère le User-Agent par défaut
-        val defaultUserAgent = webView.settings.userAgentString
-
-        // On retire la mention "; wv" (WebView) pour tromper la sécurité de Google
-        webView.settings.userAgentString = defaultUserAgent.replace("; wv", "")
-
-        // Solution alternative forte si le replace() ne fonctionne pas :
-        // webView.settings.userAgentString = "Mozilla/5.0 (Linux; Android 13; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
-
-
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                urlLoaded = true // Confirme que la page a bien été chargée au moins une fois
+        // 3. Configuration du Swipe to Refresh
+        swipeRefresh.setOnRefreshListener {
+            if (isNetworkAvailable(getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager)) {
+                webView.reload()
+            } else {
+                swipeRefresh.isRefreshing = false
             }
         }
+        
+        // Couleur de l'animation de chargement
+        swipeRefresh.setColorSchemeResources(android.R.color.holo_blue_bright, android.R.color.holo_green_light, android.R.color.holo_orange_light, android.R.color.holo_red_light)
 
-        // 3. Gestion du bouton retour
+        // 4. Gestion du bouton retour
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (webView.visibility == View.VISIBLE && webView.canGoBack()) {
@@ -89,20 +86,88 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        // 4. Lancer la surveillance de la connexion Internet
+        // 5. Lancer la surveillance de la connexion Internet
         setupNetworkListener()
 
-        // 5. Gérer la disparition de l'écran de démarrage après 2 secondes (2000 ms)
+        // 6. Gérer la disparition de l'écran de démarrage après 2 secondes (2000 ms)
         Handler(Looper.getMainLooper()).postDelayed({
             hideSplashScreen()
         }, 2000)
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun setupWebView() {
+        val settings = webView.settings
+        
+        // Activations essentielles pour les apps web modernes
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true // Très important pour le cache, localStorage, etc.
+        settings.databaseEnabled = true
+        settings.allowFileAccess = true
+        
+        // Optimisations d'affichage
+        settings.useWideViewPort = true
+        settings.loadWithOverviewMode = true
+        settings.setSupportZoom(true)
+        settings.builtInZoomControls = true
+        settings.displayZoomControls = false // Cache les boutons de zoom moches
+
+        // Interface JS
+        webView.addJavascriptInterface(WebAppInterface(this), "AndroidShare")
+
+        // User Agent
+        val defaultUserAgent = settings.userAgentString
+        settings.userAgentString = defaultUserAgent.replace("; wv", "")
+
+        // WebChromeClient : Gère la ProgressBar
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                if (newProgress < 100) {
+                    progressBar.visibility = View.VISIBLE
+                    progressBar.progress = newProgress
+                } else {
+                    progressBar.visibility = View.GONE
+                }
+            }
+        }
+
+        // WebViewClient : Gère la navigation et le SwipeRefresh
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                progressBar.visibility = View.VISIBLE
+            }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                urlLoaded = true
+                swipeRefresh.isRefreshing = false // Arrête l'animation de rafraîchissement
+                progressBar.visibility = View.GONE
+            }
+
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url.toString()
+                // Si c'est un lien vers une autre appli (tel, mailto, whatsapp, etc.)
+                if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("whatsapp:")) {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        startActivity(intent)
+                        return true
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                // Par défaut, charger dans la WebView
+                return false
+            }
+        }
+    }
+
     // Fonction pour faire disparaître le logo en douceur avec une animation
     private fun hideSplashScreen() {
         layoutSplash.animate()
-            .alpha(0f) // Rend l'écran transparent
-            .setDuration(500) // Durée de l'animation en millisecondes
+            .alpha(0f)
+            .setDuration(500)
             .withEndAction {
                 layoutSplash.visibility = View.GONE
             }
@@ -112,18 +177,14 @@ class MainActivity : AppCompatActivity() {
     private fun setupNetworkListener() {
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-        // Vérifier l'état immédiat au lancement
         updateUI(isNetworkAvailable(connectivityManager))
 
-        // Écouter les changements futurs
         connectivityManager.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                // Internet est de retour ! (Il faut utiliser runOnUiThread pour modifier l'interface)
                 runOnUiThread { updateUI(true) }
             }
 
             override fun onLost(network: Network) {
-                // Internet a coupé !
                 runOnUiThread { updateUI(false) }
             }
         })
@@ -132,19 +193,17 @@ class MainActivity : AppCompatActivity() {
     // Fonction qui change l'affichage selon s'il y a internet ou non
     private fun updateUI(isConnected: Boolean) {
         if (isConnected) {
-            // Cacher le message hors-ligne, montrer la WebView
             layoutOffline.visibility = View.GONE
-            webView.visibility = View.VISIBLE
+            // On ne montre la webview que si le splash est fini, 
+            // mais on simplifie en gérant via la frame racine.
+            swipeRefresh.visibility = View.VISIBLE
 
-            // Si l'URL n'a pas encore été chargée avec succès, on la charge
             if (!urlLoaded) {
-                // On vérifie s'il y a un lien externe, sinon on prend l'accueil
                 val linkToLoad = intent.data?.toString() ?: botUrl
                 webView.loadUrl(linkToLoad)
             }
         } else {
-            // Cacher la WebView, montrer le message hors-ligne
-            webView.visibility = View.GONE
+            swipeRefresh.visibility = View.GONE
             layoutOffline.visibility = View.VISIBLE
         }
     }
