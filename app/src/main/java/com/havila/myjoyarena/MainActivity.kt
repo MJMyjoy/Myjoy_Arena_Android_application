@@ -194,9 +194,8 @@ class MainActivity : AppCompatActivity() {
     private fun updateUI(isConnected: Boolean) {
         if (isConnected) {
             layoutOffline.visibility = View.GONE
-            // On ne montre la webview que si le splash est fini, 
-            // mais on simplifie en gérant via la frame racine.
             swipeRefresh.visibility = View.VISIBLE
+            webView.visibility = View.VISIBLE // CORRECTIF: Il faut aussi rendre la webview visible !
 
             if (!urlLoaded) {
                 val linkToLoad = intent.data?.toString() ?: botUrl
@@ -204,6 +203,7 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             swipeRefresh.visibility = View.GONE
+            webView.visibility = View.GONE
             layoutOffline.visibility = View.VISIBLE
         }
     }
