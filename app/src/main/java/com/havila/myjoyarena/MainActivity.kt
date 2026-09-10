@@ -1,4 +1,4 @@
-﻿package com.havila.myjoyarena
+package com.havila.myjoyarena
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -31,7 +31,7 @@ class WebAppInterface(private val context: Context) {
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_SUBJECT, title)
-            putExtra(Intent.EXTRA_TEXT, "$text $url")
+            putExtra(Intent.EXTRA_TEXT, " ")
         }
         context.startActivity(Intent.createChooser(shareIntent, "Partager via"))
     }
